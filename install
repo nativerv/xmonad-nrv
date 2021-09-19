@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# Link build script and all the necessary files from xmonad-nrv source location 
+# to ~/.xmonad folder, so XMonad can use it to recompile and run xmonad-nrv.
+
+# Fall back to .xmonad as it seems like XMonad creates .xmonad
+# folder automatically and can't actually use the XDG location 
+#XMONAD_CONFIG_DIR="${XDG_CONFIG_DIR:-$HOME/.config}/xmonad"
+XMONAD_CONFIG_DIR="$HOME/.xmonad"
+XMONAD_XPM_DIR="${XMONAD_CONFIG_DIR}/xpm"
+XMONAD_SOURCE_DIR="$(pwd)"
+
+# Ensure directories
+[ ! -d "${XMONAD_CONFIG_DIR}" ] && mkdir "${XMONAD_CONFIG_DIR}"
+[ ! -d "${XMONAD_CONFIG_DIR}" ] && mkdir "${XMONAD_CONFIG_DIR}"
+
+# Create link back to xmonad-nrv source location, so the build script knows
+# where to cd to
+echo "${XMONAD_SOURCE_DIR}" > "${XMONAD_CONFIG_DIR}/xmonad_source_dir_path"
+
+# Create hard links both XMonad and XMobar can't into symlinks
+ln -f -T build "${XMONAD_CONFIG_DIR}/build"
+ln -f -T icons/xpm/* "${XMONAD_XPM_DIR}"

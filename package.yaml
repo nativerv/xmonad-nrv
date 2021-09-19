@@ -1,0 +1,30 @@
+name: xmonad-nrv
+version: 2.0.0
+synopsis: My XMonad configuration.
+license: GPL-3
+author: nrv
+homepage: https://github.com/naviverv/xmonad-nrv
+
+ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -j -dynamic
+
+dependencies:
+  - base
+  - xmonad-contrib >= 0.16
+
+source-dirs: src
+
+executables:
+  xmonad:
+    main: xmonad.hs
+    dependencies:
+      - xmonad
+      - containers
+      - X11 >= 1.10
+      - filepath
+  xmobar:
+    main: xmobar.hs
+    dependencies:
+      - xmobar
+      - xmonad
+      - filepath
+    ghc-options: -rtsopts -threaded -with-rtsopts=-N

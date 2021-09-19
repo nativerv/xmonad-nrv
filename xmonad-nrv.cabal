@@ -1,0 +1,50 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.4.
+--
+-- see: https://github.com/sol/hpack
+
+name:           xmonad-nrv
+version:        2.0.0
+synopsis:       My XMonad configuration.
+homepage:       https://github.com/naviverv/xmonad-nrv
+author:         nrv
+maintainer:     nrv
+license:        GPL-3
+license-file:   LICENSE
+build-type:     Simple
+
+executable xmobar
+  main-is: xmobar.hs
+  other-modules:
+      Theme.Theme
+      Theme.Xresources
+      Paths_xmonad_nrv
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -j -dynamic -rtsopts -threaded -with-rtsopts=-N
+  build-depends:
+      base
+    , filepath
+    , xmobar
+    , xmonad
+    , xmonad-contrib >=0.16
+  default-language: Haskell2010
+
+executable xmonad
+  main-is: xmonad.hs
+  other-modules:
+      Theme.Theme
+      Theme.Xresources
+      Paths_xmonad_nrv
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Wincomplete-record-updates -Wincomplete-uni-patterns -Wredundant-constraints -O2 -j -dynamic
+  build-depends:
+      X11 >=1.10
+    , base
+    , containers
+    , filepath
+    , xmonad
+    , xmonad-contrib >=0.16
+  default-language: Haskell2010
