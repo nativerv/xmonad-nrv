@@ -27,4 +27,5 @@ executables:
       - xmobar
       - xmonad
       - filepath
+      - process
     ghc-options: -rtsopts -threaded -with-rtsopts=-N

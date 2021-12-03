@@ -1,4 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes, DeriveDataTypeable, TypeSynonymInstances, MultiParamTypeClasses #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-deferred-out-of-scope-variables #-}
 
 -- XMonad
 import XMonad
@@ -13,6 +16,7 @@ import XMonad.Actions.Promote
 import XMonad.Actions.DynamicWorkspaces
 import XMonad.Actions.CopyWindow
 import XMonad.Actions.WithAll
+import XMonad.Actions.Warp
 
 -- Hooks
 import XMonad.Hooks.EwmhDesktops
@@ -53,6 +57,9 @@ import Theme.Theme
 import XMonad.Hooks.StatusBar.PP (xmobarFont)
 import Data.List (isInfixOf)
 
+import Common.Common
+import Util.Util
+
 main :: IO ()
 main = do
   xmobarProc <- spawnPipe "killall xmobar; xmobar"
@@ -84,10 +91,7 @@ myTerminal :: String
 myTerminal = "st"
 
 myLauncher :: String
-myLauncher = "dmenu_run"
-
-myModMask :: KeyMask
-myModMask = mod4Mask
+myLauncher = "env sh -c dmenu_run"
 
 myBorderWidth :: Dimension
 myBorderWidth = 0
@@ -96,8 +100,8 @@ myOuterGapWidth, myInnerGapWidth :: Integer
 myOuterGapWidth = 15
 myInnerGapWidth = 5
 
-centerPointerLogHook :: X ()
-centerPointerLogHook = updatePointer (0.5, 0.5) (0, 0)
+centerPointer :: X ()
+centerPointer = warpToWindow 0.5 0.5
 
 myNav2DConfig :: Navigation2DConfig
 myNav2DConfig = def
@@ -127,9 +131,9 @@ xmobarLogHook :: Handle -> X ()
 xmobarLogHook dest = dynamicLogWithPP xmobarPP
   { ppOutput           = hPutStrLn dest
   , ppVisible          = wsIconFont . wsNonemptyColor . wrap "(" ")"          -- | Visible with windows (on another monitor)
-  , ppVisibleNoWindows = Just $ wsIconFont . wsNonemptyColor . wrap "(" ")"   -- | Visible with no windows (on another monitor)
+  , ppVisibleNoWindows = Just $ wsIconFont . wrap "(" ")"                     -- | Visible with no windows (on another monitor)
   , ppHidden           = wsIconFont . wsNonemptyColor                         -- | Hidden with no windows
-  , ppCurrent          = wsIconFont . wsActiveColor                           -- | Visible (on current monitor)
+  , ppCurrent          = wsIconFont . wsActiveUnderline .  wsNonemptyColor     -- | Visible (on current monitor)
   , ppHiddenNoWindows  = wsIconFont                                           -- | Not on any monitor and having no windows
   , ppUrgent           = wsUrgentColor                                        -- | Urgent (window on this tag wants your focus)
   , ppTitle            = titleColor
@@ -137,44 +141,41 @@ xmobarLogHook dest = dynamicLogWithPP xmobarPP
   , ppSep              = xmobarColor colorGrey "" " | "
   }
   where
-    wsIconFont    = xmobarFont 5
-    wsActiveColor = xmobarColor color10 ""
-    wsNonemptyColor = xmobarColor color01 ""
-    wsUrgentColor = xmobarColor "#e46e49" ""
-    titleColor    = xmobarColor color01 ""
-    layoutAction  = xmobarAction ("xdotool key " <> modMaskName myModMask <> "+space") "1"
-    layoutColor   = xmobarColor color06 ""
+    wsIconFont         = xmobarFont 0
+    --wsSurroundGapFont  = xmobarFont 6
+    --wsActiveColor      = xmobarColor color10 ""
+    wsActiveUnderline  = xmobarBorder "Bottom" color10 2
+    wsNonemptyColor    = xmobarColor color01 ""
+    wsUrgentColor      = xmobarColor "#e46e49" ""
+    titleColor         = xmobarColor color01 ""
+    layoutAction       = xmobarAction ("xdotool key " <> modMaskName myModMask <> "+space") "1"
+    layoutColor        = xmobarColor color06 ""
 
-fadeInactiveLogHook' :: X ()
-fadeInactiveLogHook' = fadeInactiveLogHook 0.9
-
+myLogHook :: Handle -> X ()
 myLogHook dest =
-  centerPointerLogHook
+  mempty
+  -- <+> centerPointer
   <+> xmobarLogHook dest
   -- <+> fadeInactiveLogHook'
 
--- myFocusedBorderColor = "#10EEFF"
+myFocusedBorderColor :: String
 myFocusedBorderColor = "#EEEEEE"
--- , borderColor = "#0055FF"
 
 xmobarEscape :: String -> String
 xmobarEscape = concatMap doubleLts
   where doubleLts '<' = "<<"
         doubleLts x   = [x]
 
-modMaskName :: KeyMask -> String
-modMaskName modMaskUsed
-  | modMaskUsed == mod1Mask = "alt"
-  | modMaskUsed == mod2Mask = "Num_Lock"
-  | modMaskUsed == mod3Mask = undefined
-  | modMaskUsed == mod4Mask = "super"
-  | modMaskUsed == mod5Mask = undefined
-  | otherwise = undefined
-
-
 myWorkspaces :: [String]
-myWorkspaces = clickable . map xmobarEscape $ ["爵", "\61728", "\61802", "\61723", "\57871"]
+myWorkspaces = clickable . withGaps . escaped $ wsStrings
   where
+    wsStrings  =
+      -- globe     terminal  youtube   gamepad   wrench
+      --[ "\64158", "\61728", "\61802", "\61723", "\57871", "hyd", "not" ]
+        [ "www", ">_", "vid", "gam", "wrk", "tool", "hyd", "note" ]
+    withGaps   = map (wrap smallSpace smallSpace)
+    smallSpace = xmobarFont 6 " "
+    escaped    = map xmobarEscape
     clickable workspaceList =
       [
         concat [ "<action=xdotool key "
@@ -185,7 +186,7 @@ myWorkspaces = clickable . map xmobarEscape $ ["爵", "\61728", "\61802", "\6172
                 , workspace
                 , "</action>"
                ] |
-        (index, workspace) <- zip [1..5::Int] workspaceList
+        (index, workspace) <- zip [1..length workspaceList::Int] workspaceList
       ]
 
 myInnerGapBorder :: Border
@@ -194,23 +195,27 @@ myInnerGapBorder = Border myInnerGapWidth myInnerGapWidth myInnerGapWidth myInne
 myLayoutHook = tall ||| full
   where
     named n = renamed [XMonad.Layout.Renamed.Replace n]
-    --                         MasterCount ResizeAmount MasterSize SomeShit
     tall = named "[]="
       $ smartBorders
       $ avoidStruts
       $ spacingRaw False myInnerGapBorder True myInnerGapBorder True
       $ layoutHints
-      $ ResizableTall 1           (1/30)       0.5        []
+      --               MasterCount  ResizeAmount  MasterSize  SomeShit
+      $ ResizableTall  1            (1/30)        0.5         []
 
     full = named "[ ]"
       $ smartBorders
       $ avoidStruts
       $ spacingRaw False myInnerGapBorder True myInnerGapBorder True
       $ layoutHints
-      $ Full
+      $ Full 
 
 myHandleEventHook :: Event -> X All
-myHandleEventHook = hintsEventHook <+> docksEventHook <+> handleEventHook def
+myHandleEventHook = 
+  mempty 
+  <+> hintsEventHook
+  <+> docksEventHook 
+  <+> handleEventHook def
 
 wsKeys :: [String]
 wsKeys = map show $ [1..9::Int] ++ [0]
@@ -220,13 +225,13 @@ myKeys conf =
   let
 
   subKeys str ks = subtitle str : mkNamedKeymap conf ks
-  screenKeys     = ["w","v","z"]
+  --screenKeys     = ["w","v","z"]
   dirKeys        = ["j","k","h","l"]
   dirs           = [ D,  U,  L,  R ]
 
   -- Zip with modKey
-  zipM  modKey name actionKeys actions f = zipWith (\key d -> (modKey ++ key, name $ f d)) actionKeys actions
-  zipM' modKey name actionKeys actions f b = zipWith (\key d -> (modKey ++ key, name $ f d b)) actionKeys actions
+  zipM  modKey name actionKeys actions f = zipWith (\key action -> (modKey ++ key, name $ f action)) actionKeys actions
+  zipM' modKey name actionKeys actions f boolean = zipWith (\key action -> (modKey ++ key, name $ f action boolean)) actionKeys actions
 
   in
 
@@ -237,8 +242,8 @@ myKeys conf =
     , ("M-S-<Backspace>"    , addName "Kill All Copies Of Focused"         kill)
     , ("M-M1-<Backspace>"   , addName "Kill All On Current Workspace"      kill)
     , ("M-b"                , addName "Promote To Master"                  promote)
-    , ("M-S-,"                , addName "Increment Master Size"              $ sendMessage (IncMasterN 1))
-    , ("M-S-."                , addName "Decrement Master Size"              $ sendMessage (IncMasterN (-1)))
+    , ("M-S-,"              , addName "Increment Master Size"              $ sendMessage (IncMasterN 1))
+    , ("M-S-."              , addName "Decrement Master Size"              $ sendMessage (IncMasterN (-1)))
     , ("M-<Tab>"            , addName "Cycle Focus"                        $ windows W.focusDown)
     , ("M-S-<Tab>"          , addName "Cycle Focus Back"                   $ windows W.focusUp)
     , ("M-z m"              , addName "Focus Master"                       $ windows W.focusMaster)
@@ -246,8 +251,11 @@ myKeys conf =
     , ("M-f"                , addName "FullFloat Window"                   $ withFocused $ windows . flip W.float (W.RationalRect 0 0 1 1))
     , ("M-n"                , addName "Refresh (fix client sizes)"         $ refresh)
   ]
-    ++ zipM' "M-"            (addName "Navigate")                          dirKeys dirs windowGo False
-    ++ zipM' "M-C-"          (addName "Swap")                              dirKeys dirs windowSwap False
+                                                                                        -- Also warp cursor cursor when Navigating/Swapping - 
+                                                                                        -- cause putting warp to logHook randomly warps w/o Navigating
+                                                                                        -- when cursor is out of window client space
+    ++ zipM' "M-"            (addName "Navigate")                          dirKeys dirs (\direction isWrap -> windowGo direction isWrap >> centerPointer) False
+    ++ zipM' "M-C-"          (addName "Swap")                              dirKeys dirs (\direction isWrap -> windowSwap direction isWrap >> centerPointer) False
     ++ zipM  "M-S-"          (addName "Move To Workspace")                 wsKeys [0..] (withNthWorkspace W.shift)
     ++ zipM  "M-C-"          (addName "Copy To Workspace")                 wsKeys [0..] (withNthWorkspace copy)
   )
@@ -321,13 +329,13 @@ myKeys conf =
 myEzRemovedKeybindings :: [String]
 myEzRemovedKeybindings =
   [
-      "M-q"
+    "M-q"
   ]
-  -- , "M-f"
 
 myStartupHook :: X ()
 myStartupHook = do
-    setDefaultCursor xC_left_ptr
+  setDefaultCursor xC_left_ptr
+  setWMName "LG3D"
 
 
 doDialogCenterFloat :: Query (Endo WindowSet)
@@ -337,29 +345,38 @@ windowRole :: Query String
 windowRole = stringProperty "WM_WINDOW_ROLE"
 
 -- | @q =* x@. if the result of @q@ contains @x@, return 'True'.
-(=*) :: Query String -> String -> Query Bool
+(=*) :: Query String   -- | Query for window's property
+        -> String      -- | Substring to match
+        -> Query Bool
 q =* x = fmap (isInfixOf x) q
+
+fixSize = liftX (do sendMessage (IncMasterN 1)
+                    sendMessage (IncMasterN (-1)))
 
 myManageHook :: XMonad.Query (Data.Monoid.Endo WindowSet)
 myManageHook =
      composeAll
-     [ className =? "confirm"            --> doCenterFloat
-     , className =? "file_progress"      --> doCenterFloat
-     , className =? "dialog"             --> doCenterFloat
-     , className =? "Zenity"             --> doCenterFloat
-     , className =? "download"           --> doCenterFloat
-     , className =? "error"              --> doCenterFloat
-     , className =? "notification"       --> doCenterFloat
-     , className =? "pinentry-gtk-2"     --> doFloat
-     , className =? "splash"             --> doCenterFloat
-     , className =? "toolbar"            --> doFloat
-     , className =? "feh"                --> doFullFloat
-     , className =? "Sxiv"               --> doFullFloat
-     , className =? "Veracrypt"          --> doCenterFloat
-     , isDialog                          --> doCenterFloat
+     [ className =? "confirm"         --> doCenterFloat
+     , className =? "file_progress"   --> doCenterFloat
+     , className =? "dialog"          --> doCenterFloat
+     , className =? "Zenity"          --> doCenterFloat
+     , className =? "download"        --> doCenterFloat
+     , className =? "error"           --> doCenterFloat
+     , className =? "notification"    --> doCenterFloat
+     , className =? "pinentry-gtk-2"  --> doFloat
+     , className =? "splash"          --> doCenterFloat
+     , className =? "toolbar"         --> doFloat
+     , className =? "feh"             --> doFullFloat
+     , className =? "Sxiv"            --> doFullFloat
+     , className =? "Veracrypt"       --> doCenterFloat
+     , isDialog                       --> doCenterFloat
+     --, isFullscreen                   --> ask >> fixSize
 
      -- , className =? "obs" <&&> title =? "Filter name"
         -- --> doCenterFloat
+
+     , windowRole =? "pop-up"
+        --> doFloat
 
      , title =? "The Elder Scrolls Online Install"
         --> doCenterFloat

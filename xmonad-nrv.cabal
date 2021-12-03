@@ -17,8 +17,10 @@ build-type:     Simple
 executable xmobar
   main-is: xmobar.hs
   other-modules:
+      Common.Common
       Theme.Theme
       Theme.Xresources
+      Util.Util
       Paths_xmonad_nrv
   hs-source-dirs:
       src
@@ -26,6 +28,7 @@ executable xmobar
   build-depends:
       base
     , filepath
+    , process
     , xmobar
     , xmonad
     , xmonad-contrib >=0.16
@@ -34,8 +37,10 @@ executable xmobar
 executable xmonad
   main-is: xmonad.hs
   other-modules:
+      Common.Common
       Theme.Theme
       Theme.Xresources
+      Util.Util
       Paths_xmonad_nrv
   hs-source-dirs:
       src
