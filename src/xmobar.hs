@@ -48,8 +48,8 @@ myConfig :: Config
 myConfig = defaultConfig {
     font            =   "xft:monospace:weight=bold:pixelsize=10:antialias=true:hinting=true"
   , additionalFonts = [ "xft:FiraCode Nerd Font Mono:pixelsize=11:antialias=true:hinting=true"
-                      , "xft:Font Awesome 5 Free Solid:pixelsize=12"
-                      , "xft:Font Awesome 5 Brands:pixelsize=12"
+                      , "xft:Font Awesome 6 Free Solid:pixelsize=12"
+                      , "xft:Font Awesome 6 Brands:pixelsize=12"
                       , "xft:monospace:pixelsize=26"
                       , "xft:monospace:pixelsize=20"
                       , "xft:monospace:pixelsize=10"   -- % Spaces around workspace icons
